@@ -310,7 +310,20 @@ if menu_principal == "🚜 Equipos y Fletes":
                 use_container_width=True, hide_index=True
             )
             
-# --- VISOR DIRECTO EN LA MISMA PÁGINA ---
+# --- VISOR DESDE SUPABASE ---
+            with st.expander("📂 Visualizar PDF en la Página"):
+                df_con_pdf = df_f[df_f['archivo_pdf'].notna() & (df_f['archivo_pdf'] != "") & (df_f['archivo_pdf'].astype(str) != "None")]
+                if not df_con_pdf.empty:
+                    opciones_pdf = df_con_pdf['id'].astype(str) + " - " + df_con_pdf['proveedor'] + " (" + df_con_pdf['equipo'] + ")"
+                    sel_pdf = st.selectbox("Selecciona la cotización para ver el documento:", opciones_pdf)
+                    if sel_pdf:
+                        id_p = int(sel_pdf.split(" - ")[0])
+                        nombre_real_pdf = df_con_pdf[df_con_pdf['id'] == id_p]['archivo_pdf'].values[0]
+                        
+                        # Obtener URL pública de Supabase
+                        res_url = supabase_client.storage.from_("documentos").get_public_url(nombre_real_pdf)
+                        url_publica = res_url.get('publicUrl', res_url) if isinstance(res_url, dict) else res_url
+                        
                         st.markdown("---")
                         st.subheader("📄 Vista Previa del Documento")
                         
@@ -319,6 +332,8 @@ if menu_principal == "🚜 Equipos y Fletes":
                         
                         st.markdown("---")
                         st.link_button("📥 Descargar o abrir en pestaña completa", url_publica)
+                else:
+                    st.info("No hay PDFs adjuntos para este filtro.")
 # ==========================================
 # MÓDULO 2: SERVICIOS
 # ==========================================
