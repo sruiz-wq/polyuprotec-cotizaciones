@@ -157,6 +157,12 @@ iconos_equipos = {
 # ==========================================
 st.set_page_config(page_title="Directorio Polyuprotec", layout="wide", initial_sidebar_state="expanded")
 
+# Mostrar logo en la barra lateral
+try:
+    st.sidebar.image("logo.png", use_container_width=True)
+except Exception:
+    pass
+
 st.sidebar.markdown("---")
 st.sidebar.header("📌 Menú Principal")
 menu_principal = st.sidebar.radio("Selecciona el Módulo:", ["🚜 Equipos y Fletes", "🛠️ Módulo de Servicios"])
@@ -199,13 +205,19 @@ if menu_principal == "🚜 Equipos y Fletes":
                     nombre_pdf = ""
                     if archivo_pdf:
                         # Generar nombre único con la hora exacta
-                        nombre_pdf = f"{int(datetime.now().timestamp())}_{prov}_{equipo}.pdf".replace(" ", "_")
-                        # Subir archivo directamente a Supabase Storage
-                        supabase_client.storage.from_("documentos").upload(
-                            file=archivo_pdf.getvalue(),
-                            path=nombre_pdf,
-                            file_options={"content-type": "application/pdf"}
-                        )
+                        timestamp_unico = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                        nombre_pdf = f"{timestamp_unico}_{prov}_{equipo}.pdf".replace(" ", "_")
+                        # Subir archivo directamente a Supabase Storage con .read() y upsert
+                        try:
+                            supabase_client.storage.from_("documentos").upload(
+                                path=nombre_pdf,
+                                file=archivo_pdf.read(),
+                                file_options={"content-type": "application/pdf", "upsert": "true"}
+                            )
+                        except Exception as e:
+                            st.error(f"⚠️ Error al subir el PDF a Supabase: {e}")
+                            nombre_pdf = ""
+                            
                     insertar_cotizacion(fecha_cot, prov, contacto, equipo, esp_final, tarifa, orig, dest, alquiler, flete, nombre_pdf, obs)
                     st.success("¡Agregado exitosamente a la nube!")
                     st.rerun()
@@ -340,12 +352,18 @@ elif menu_principal == "🛠️ Módulo de Servicios":
                 if prov_serv and ubica:
                     nombre_pdf_s = ""
                     if pdf_serv:
-                        nombre_pdf_s = f"{int(datetime.now().timestamp())}_{prov_serv}_{tipo_s}.pdf".replace(" ", "_")
-                        supabase_client.storage.from_("documentos").upload(
-                            file=pdf_serv.getvalue(),
-                            path=nombre_pdf_s,
-                            file_options={"content-type": "application/pdf"}
-                        )
+                        timestamp_unico_s = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                        nombre_pdf_s = f"{timestamp_unico_s}_{prov_serv}_{tipo_s}.pdf".replace(" ", "_")
+                        try:
+                            supabase_client.storage.from_("documentos").upload(
+                                path=nombre_pdf_s,
+                                file=pdf_serv.read(),
+                                file_options={"content-type": "application/pdf", "upsert": "true"}
+                            )
+                        except Exception as e:
+                            st.error(f"⚠️ Error al subir el PDF de servicio: {e}")
+                            nombre_pdf_s = ""
+                            
                     insertar_servicio(f_serv, prov_serv, cont_serv, tipo_s, alcance, ubica, costo_tot, nombre_pdf_s, obs_serv)
                     st.success("¡Servicio registrado con éxito en la nube!")
                     st.rerun()
