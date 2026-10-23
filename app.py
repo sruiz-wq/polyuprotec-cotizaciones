@@ -321,12 +321,16 @@ if menu_principal == "🚜 Equipos y Fletes":
                     if sel_pdf:
                         id_p = int(sel_pdf.split(" - ")[0])
                         nombre_real_pdf = df_con_pdf[df_con_pdf['id'] == id_p]['archivo_pdf'].values[0]
-                        url_publica = supabase_client.storage.from_("documentos").get_public_url(nombre_real_pdf)
+                        
+                        # Obtener URL pública de Supabase
+                        res_url = supabase_client.storage.from_("documentos").get_public_url(nombre_real_pdf)
+                        url_publica = res_url.get('publicUrl', res_url) if isinstance(res_url, dict) else res_url
                         
                         st.markdown("---")
-                        st.markdown(f'<iframe src="{url_publica}" width="100%" height="600px" type="application/pdf"></iframe>', unsafe_allow_html=True)
+                        # Botón directo para abrir o descargar sin bloqueos de Chrome
+                        st.markdown(f"📄 **Documento disponible:** [Abrir PDF en una nueva pestaña]({url_publica})")
+                        st.link_button("📥 Descargar o ver PDF", url_publica)
                         st.markdown("---")
-                        st.link_button("📥 Descargar o abrir en pestaña completa", url_publica)
                 else:
                     st.info("No hay PDFs adjuntos para este filtro.")
         else:
