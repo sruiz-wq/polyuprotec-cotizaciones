@@ -196,16 +196,19 @@ if menu_principal == "🚜 Equipos y Fletes":
             
             if st.form_submit_button("💾 Guardar Cotización", use_container_width=True):
                 if prov and orig and dest:
-                    nombre_pdf = ""
+nombre_pdf = ""
                     if archivo_pdf:
-                        # Generar nombre único con la hora exacta
-                        nombre_pdf = f"{int(datetime.now().timestamp())}_{prov}_{equipo}.pdf".replace(" ", "_")
-                        # Subir archivo directamente a Supabase Storage
-                        supabase_client.storage.from_("documentos").upload(
-                            file=archivo_pdf.getvalue(),
-                            path=nombre_pdf,
-                            file_options={"content-type": "application/pdf"}
-                        )
+                        timestamp_unico = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                        nombre_pdf = f"{timestamp_unico}_{prov}_{equipo}.pdf".replace(" ", "_")
+                        try:
+                            supabase_client.storage.from_("documentos").upload(
+                                path=nombre_pdf,
+                                file=archivo_pdf.read(),
+                                file_options={"content-type": "application/pdf", "upsert": "true"}
+                            )
+                        except Exception as e:
+                            st.error(f"⚠️ Error al subir el PDF a Supabase: {e}")
+                            nombre_pdf = ""
                     insertar_cotizacion(fecha_cot, prov, contacto, equipo, esp_final, tarifa, orig, dest, alquiler, flete, nombre_pdf, obs)
                     st.success("¡Agregado exitosamente a la nube!")
                     st.rerun()
