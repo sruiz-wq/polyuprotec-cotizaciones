@@ -310,7 +310,7 @@ if menu_principal == "🚜 Equipos y Fletes":
                 use_container_width=True, hide_index=True
             )
             
-# --- VISOR DESDE SUPABASE ---
+# --- VISOR INTEGRADO DIRECTO EN LA PÁGINA ---
             with st.expander("📂 Visualizar PDF en la Página"):
                 df_con_pdf = df_f[df_f['archivo_pdf'].notna() & (df_f['archivo_pdf'] != "") & (df_f['archivo_pdf'].astype(str) != "None")]
                 if not df_con_pdf.empty:
@@ -320,22 +320,24 @@ if menu_principal == "🚜 Equipos y Fletes":
                         id_p = int(sel_pdf.split(" - ")[0])
                         nombre_real_pdf = df_con_pdf[df_con_pdf['id'] == id_p]['archivo_pdf'].values[0]
                         
-                        # Obtener URL pública de Supabase
-                        res_url = supabase_client.storage.from_("documentos").get_public_url(nombre_real_pdf)
-                        url_publica = res_url.get('publicUrl', res_url) if isinstance(res_url, dict) else res_url
-                        
-                        st.markdown("---")
-                        st.subheader("📄 Documento Adjunto en la Nube")
-                        
-                        # Usamos un contenedor estilizado con enlace directo y botón de descarga rápida
-                        col_v1, col_v2 = st.columns([2, 1])
-                        with col_v1:
-                            st.markdown(f"**Archivo:** `{nombre_real_pdf}`")
-                            st.markdown(f"🔗 [Hacer clic aquí para abrir el PDF directamente]({url_publica})")
-                        with col_v2:
-                            st.link_button("📥 Descargar PDF", url_publica, use_container_width=True)
+                        try:
+                            import base64
+                            # Descargar los bytes reales del PDF desde el bucket de Supabase
+                            pdf_bytes = supabase_client.storage.from_("documentos").download(nombre_real_pdf)
                             
-                        st.markdown("---")
+                            # Codificar en Base64 para incrustarlo nativamente en la página
+                            b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
+                            
+                            st.markdown("---")
+                            st.subheader("📄 Vista Previa del Documento")
+                            
+                            # Incrustar el visor interactivo sin salir de Streamlit
+                            pdf_display = f'<iframe src="data:application/pdf;base64,{b64_pdf}" width="100%" height="600px" type="application/pdf"></iframe>'
+                            st.markdown(pdf_display, unsafe_allow_html=True)
+                            
+                            st.markdown("---")
+                        except Exception as e:
+                            st.error(f"⚠️ No se pudo cargar la vista previa del PDF: {e}")
                 else:
                     st.info("No hay PDFs adjuntos para este filtro.")
                     
