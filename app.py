@@ -255,4 +255,181 @@ if menu_principal == "🚜 Equipos y Fletes":
                         st.rerun()
 
     st.markdown("---")
-    if
+    if not df.empty:
+        df['costo_total'] = df['costo_alquiler'] + df['costo_flete']
+        with st.container(border=True):
+            col_f1, col_f2 = st.columns(2)
+            with col_f1: eq_s = st.selectbox("🔍 Selecciona el Equipo:", ['Todos'] + list(df['equipo'].unique()))
+            with col_f2: orig_s = st.selectbox("🔍 Selecciona el Origen:", ['Todas'] + list(df['origen'].unique()))
+        
+        df_f = df.copy()
+        if eq_s != 'Todos': df_f = df_f[df_f['equipo'] == eq_s]
+        if orig_s != 'Todas': df_f = df_f[df_f['origen'] == orig_s]
+        
+        if not df_f.empty:
+            df_f = df_f.sort_values('costo_alquiler', ascending=True)
+            mejor_opcion = df_f.iloc[0]
+            icono = iconos_equipos.get(eq_s, "⚙️")
+            st.markdown(f"## {icono} Análisis para: {eq_s}")
+            
+            c1, c2, c3, c4, c5 = st.columns(5)
+            c1.metric("Cotizaciones", len(df_f))
+            c2.metric("Opciones", df_f['equipo'].nunique())
+            c3.metric("🏆 Mejor Proveedor", mejor_opcion['proveedor'])
+            c4.metric("⚙️ Especificación", mejor_opcion['especificacion'])
+            c5.metric("💰 Alquiler Mínimo", formato_pesos(mejor_opcion['costo_alquiler']))
+
+            st.markdown("### 📋 Base de Datos Detallada")
+            df_disp = df_f.copy()
+            df_disp['archivo_pdf'] = df_disp['archivo_pdf'].apply(lambda x: "📄 Adjunto" if pd.notna(x) and str(x).strip() != "" and str(x).strip() != "None" else "Sin PDF")
+            for col in ['costo_alquiler', 'costo_flete', 'costo_total']: df_disp[col] = df_disp[col].apply(formato_pesos)
+            
+            st.dataframe(
+                df_disp[['id', 'fecha', 'proveedor', 'equipo', 'especificacion', 'tipo_tarifa', 'origen', 'destino', 'costo_alquiler', 'costo_flete', 'costo_total', 'archivo_pdf', 'observaciones']], 
+                use_container_width=True, hide_index=True
+            )
+            
+            # --- VISOR DESDE SUPABASE ---
+            with st.expander("📂 Visualizar PDF en la Página"):
+                df_con_pdf = df_f[df_f['archivo_pdf'].notna() & (df_f['archivo_pdf'] != "") & (df_f['archivo_pdf'].astype(str) != "None")]
+                if not df_con_pdf.empty:
+                    opciones_pdf = df_con_pdf['id'].astype(str) + " - " + df_con_pdf['proveedor'] + " (" + df_con_pdf['equipo'] + ")"
+                    sel_pdf = st.selectbox("Selecciona la cotización para ver el documento:", opciones_pdf)
+                    if sel_pdf:
+                        id_p = int(sel_pdf.split(" - ")[0])
+                        nombre_real_pdf = df_con_pdf[df_con_pdf['id'] == id_p]['archivo_pdf'].values[0]
+                        # Obtener URL pública directa de la nube
+                        url_publica = supabase_client.storage.from_("documentos").get_public_url(nombre_real_pdf)
+                        
+                        st.markdown("---")
+                        st.markdown(f'<iframe src="{url_publica}" width="100%" height="600px" type="application/pdf"></iframe>', unsafe_allow_html=True)
+                        st.markdown("---")
+                        st.link_button("📥 Descargar o abrir en pestaña completa", url_publica)
+                else:
+                    st.info("No hay PDFs adjuntos para este filtro.")
+        else:
+            st.warning("⚠️ No se encontraron cotizaciones.")
+    else:
+        st.info("Base de datos vacía.")
+
+# ==========================================
+# MÓDULO 2: SERVICIOS
+# ==========================================
+elif menu_principal == "🛠️ Módulo de Servicios":
+    st.title("🛠 Panel de Cotizaciones: Servicios Generales")
+    df_serv = cargar_servicios()
+    tipos_servicios = ["Montaje Estructural", "Suministro de Materiales", "Pintura y Recubrimientos", "Servicio de Rolado", "Mantenimiento", "Otro"]
+
+    with st.expander("➕ Registrar Nueva Cotización de Servicio", expanded=False):
+        with st.form("form_registro_servicio", clear_on_submit=True):
+            col1, col2, col3 = st.columns(3)
+            with col1: f_serv = st.date_input("Fecha", date.today())
+            with col2: prov_serv = st.text_input("Proveedor *")
+            with col3: cont_serv = st.text_input("Contacto")
+
+            c_s1, c_s2, c_s3 = st.columns(3)
+            with c_s1: tipo_s = st.selectbox("Tipo de Servicio", tipos_servicios)
+            with c_s2: ubica = st.text_input("Ubicación / Proyecto *")
+            with c_s3: costo_tot = st.number_input("Costo Total (COP)", min_value=0, step=100000)
+            
+            alcance = st.text_area("Alcance Técnico")
+            pdf_serv = st.file_uploader("PDF", type=["pdf"])
+            obs_serv = st.text_area("Observaciones")
+
+            if st.form_submit_button("💾 Guardar Servicio", use_container_width=True):
+                if prov_serv and ubica:
+                    nombre_pdf_s = ""
+                    if pdf_serv:
+                        nombre_pdf_s = f"{int(datetime.now().timestamp())}_{prov_serv}_{tipo_s}.pdf".replace(" ", "_")
+                        supabase_client.storage.from_("documentos").upload(
+                            file=pdf_serv.getvalue(),
+                            path=nombre_pdf_s,
+                            file_options={"content-type": "application/pdf"}
+                        )
+                    insertar_servicio(f_serv, prov_serv, cont_serv, tipo_s, alcance, ubica, costo_tot, nombre_pdf_s, obs_serv)
+                    st.success("¡Servicio registrado con éxito en la nube!")
+                    st.rerun()
+                else:
+                    st.error("Completa los campos obligatorios (*).")
+
+    if not df_serv.empty:
+        with st.expander("✏️ Editar o 🗑️ Eliminar un Registro de Servicio", expanded=False):
+            opciones_del_s = df_serv['id'].astype(str) + " - " + df_serv['proveedor'] + " (" + df_serv['tipo_servicio'] + ")"
+            sel_eliminar = st.selectbox("Selecciona el servicio a modificar:", opciones_del_s)
+            
+            if sel_eliminar:
+                id_s_sel = int(sel_eliminar.split(" - ")[0])
+                reg_s = df_serv[df_serv['id'] == id_s_sel].iloc[0]
+                try: f_act_s = datetime.strptime(str(reg_s['fecha']), "%Y-%m-%d").date()
+                except: f_act_s = date.today()
+
+                tab_s1, tab_s2 = st.tabs(["✏️ Editar", "🗑️ Eliminar"])
+                with tab_s1:
+                    with st.form("form_edit_serv"):
+                        col_s1, col_s2, col_s3 = st.columns(3)
+                        with col_s1:
+                            nf_s = st.date_input("Fecha", f_act_s)
+                            np_s = st.text_input("Proveedor", reg_s['proveedor'])
+                            nc_s = st.text_input("Contacto", reg_s['contacto'] if pd.notna(reg_s['contacto']) else "")
+                        with col_s2:
+                            idx_ts = tipos_servicios.index(reg_s['tipo_servicio']) if reg_s['tipo_servicio'] in tipos_servicios else 0
+                            nt_s = st.selectbox("Tipo de Servicio", tipos_servicios, index=idx_ts)
+                            nub_s = st.text_input("Ubicación", reg_s['ubicacion'])
+                            ncos_s = st.number_input("Costo Total", min_value=0, value=int(reg_s['costo_total']), step=100000)
+                        with col_s3:
+                            nalc_s = st.text_area("Alcance Técnico", reg_s['alcance'] if pd.notna(reg_s['alcance']) else "")
+                            nobs_s = st.text_area("Observaciones", reg_s['observaciones'] if pd.notna(reg_s['observaciones']) else "")
+                        
+                        if st.form_submit_button("Actualizar Registro"):
+                            actualizar_servicio(id_s_sel, nf_s, np_s, nc_s, nt_s, nalc_s, nub_s, ncos_s, nobs_s)
+                            st.success("¡Servicio actualizado!")
+                            st.rerun()
+                with tab_s2:
+                    st.warning(f"⚠️ Vas a eliminar a **{reg_s['proveedor']}**.")
+                    if st.button("Sí, Eliminar Definitivamente", type="primary"):
+                        eliminar_servicio(id_s_sel)
+                        st.success("Registro eliminado.")
+                        st.rerun()
+
+    st.markdown("---")
+    if not df_serv.empty:
+        with st.container(border=True):
+            tipo_sel = st.selectbox("🔍 Filtra por Tipo de Servicio:", ['Todos'] + list(df_serv['tipo_servicio'].unique()))
+        
+        df_serv_f = df_serv.copy()
+        if tipo_sel != 'Todos': df_serv_f = df_serv_f[df_serv_f['tipo_servicio'] == tipo_sel]
+        
+        if not df_serv_f.empty:
+            df_serv_f = df_serv_f.sort_values('costo_total', ascending=True)
+            mejor_serv = df_serv_f.iloc[0]
+            
+            c1, c2, c3, c4 = st.columns(4)
+            c1.metric("Cotizaciones", len(df_serv_f))
+            c2.metric("Opciones", df_serv_f['tipo_servicio'].nunique())
+            c3.metric("🏆 Mejor Proveedor", mejor_serv['proveedor'])
+            c4.metric("💰 Costo Mínimo", formato_pesos(mejor_serv['costo_total']))
+
+            st.markdown("### 📋 Base de Datos Detallada")
+            df_s_disp = df_serv_f.copy()
+            df_s_disp['archivo_pdf'] = df_s_disp['archivo_pdf'].apply(lambda x: "📄 Adjunto" if pd.notna(x) and str(x).strip() != "" and str(x).strip() != "None" else "Sin PDF")
+            df_s_disp['costo_total'] = df_s_disp['costo_total'].apply(formato_pesos)
+            
+            st.dataframe(df_s_disp[['id', 'fecha', 'proveedor', 'tipo_servicio', 'alcance', 'ubicacion', 'costo_total', 'archivo_pdf', 'observaciones']], use_container_width=True, hide_index=True)
+            
+            # --- VISOR PARA SERVICIOS DESDE SUPABASE ---
+            with st.expander("📂 Visualizar PDF en la Página"):
+                df_serv_con_pdf = df_serv_f[df_serv_f['archivo_pdf'].notna() & (df_serv_f['archivo_pdf'] != "") & (df_serv_f['archivo_pdf'].astype(str) != "None")]
+                if not df_serv_con_pdf.empty:
+                    opciones_pdf_s = df_serv_con_pdf['id'].astype(str) + " - " + df_serv_con_pdf['proveedor'] + " (" + df_serv_con_pdf['tipo_servicio'] + ")"
+                    sel_pdf_s = st.selectbox("Selecciona el servicio para ver el documento:", opciones_pdf_s)
+                    if sel_pdf_s:
+                        id_ps = int(sel_pdf_s.split(" - ")[0])
+                        nombre_real_pdf_s = df_serv_f[df_serv_f['id'] == id_ps]['archivo_pdf'].values[0]
+                        url_publica_s = supabase_client.storage.from_("documentos").get_public_url(nombre_real_pdf_s)
+                        
+                        st.markdown("---")
+                        st.markdown(f'<iframe src="{url_publica_s}" width="100%" height="600px" type="application/pdf"></iframe>', unsafe_allow_html=True)
+                        st.markdown("---")
+                        st.link_button("📥 Descargar o abrir en pestaña completa", url_publica_s)
+                else:
+                    st.info("No hay PDFs adjuntos para este filtro.")
