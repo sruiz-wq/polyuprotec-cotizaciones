@@ -198,13 +198,12 @@ if menu_principal == "🚜 Equipos y Fletes":
                 if prov and orig and dest:
                     nombre_pdf = ""
                     if archivo_pdf:
-                        # Generar nombre único con la hora exacta
                         nombre_pdf = f"{int(datetime.now().timestamp())}_{prov}_{equipo}.pdf".replace(" ", "_")
-                        # Subir archivo directamente a Supabase Storage
+                        # Subida corregida compatible con la librería de Supabase
                         supabase_client.storage.from_("documentos").upload(
-                            file=archivo_pdf.getvalue(),
                             path=nombre_pdf,
-                            file_options={"content-type": "application/pdf"}
+                            file=archivo_pdf.getvalue(),
+                            file_options={"content-type": "application/pdf", "upsert": "true"}
                         )
                     insertar_cotizacion(fecha_cot, prov, contacto, equipo, esp_final, tarifa, orig, dest, alquiler, flete, nombre_pdf, obs)
                     st.success("¡Agregado exitosamente a la nube!")
@@ -340,11 +339,12 @@ elif menu_principal == "🛠️ Módulo de Servicios":
                 if prov_serv and ubica:
                     nombre_pdf_s = ""
                     if pdf_serv:
-                        nombre_pdf_s = f"{int(datetime.now().timestamp())}_{prov_serv}_{tipo_s}.pdf".replace(" ", "_")
+                        nombre_pdf = f"{int(datetime.now().timestamp())}_{prov}_{equipo}.pdf".replace(" ", "_")
+                        # Subida corregida compatible con la librería de Supabase
                         supabase_client.storage.from_("documentos").upload(
-                            file=pdf_serv.getvalue(),
                             path=nombre_pdf_s,
-                            file_options={"content-type": "application/pdf"}
+                            file=archivo_pdf.getvalue(),
+                            file_options={"content-type": "application/pdf", "upsert": "true"}
                         )
                     insertar_servicio(f_serv, prov_serv, cont_serv, tipo_s, alcance, ubica, costo_tot, nombre_pdf_s, obs_serv)
                     st.success("¡Servicio registrado con éxito en la nube!")
