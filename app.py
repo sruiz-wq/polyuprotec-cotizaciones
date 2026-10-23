@@ -171,7 +171,7 @@ if menu_principal == "🚜 Equipos y Fletes":
     opciones_equipos = ["Camión Grúa", "Grúa Telescópica", "Montacarga", "Manlift", "Brazos Articulados", "Tijeras", "Andamios", "Contenedor", "Baños Portátiles", "Otro"]
     opciones_tarifas = ["Por Día", "Por Mes", "Global (Todo el proyecto)"]
 
-    with st.expander("➕ Registrar Nueva Cotización de Equipo", expanded=False):
+with st.expander("➕ Registrar Nueva Cotización de Equipo", expanded=False):
         with st.form("form_registro_equipo", clear_on_submit=True):
             col1, col2, col3 = st.columns(3)
             with col1: fecha_cot = st.date_input("Fecha", date.today())
@@ -191,7 +191,7 @@ if menu_principal == "🚜 Equipos y Fletes":
             with col_l3: alquiler = st.number_input("Alquiler", min_value=0, step=50000)
             with col_l4: flete = st.number_input("Flete", min_value=0, step=50000)
                 
-          archivo_pdf = st.file_uploader("PDF", type=["pdf"])
+            archivo_pdf = st.file_uploader("PDF", type=["pdf"])
             obs = st.text_area("Observaciones")
             
             if st.form_submit_button("💾 Guardar Cotización", use_container_width=True):
