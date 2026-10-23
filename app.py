@@ -155,7 +155,7 @@ iconos_equipos = {
 # ==========================================
 # 2. INTERFAZ DE USUARIO (UI)
 # ==========================================
-st.set_page_config(page_title="Directorio Polyuprotec", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Directorio Polyuprotec", page_icon="logo.png", layout="wide", initial_sidebar_state="expanded")
 
 # Mostrar logo en la barra lateral
 try:
