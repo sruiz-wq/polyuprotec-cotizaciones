@@ -1,21 +1,28 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
-import sqlite3
+import psycopg2
 from datetime import date, datetime
-import os
+from supabase import create_client, Client
 
 # ==========================================
-# 1. CONFIGURACIÓN DE BASE DE DATOS (SQLite)
+# 1. CONFIGURACIÓN DE BASE DE DATOS Y NUBE (SUPABASE)
 # ==========================================
-DB_FILE = 'cotizaciones_v3.db'
+# Conexión al Storage (Para los PDFs)
+supabase_url = st.secrets["SUPABASE_URL"]
+supabase_key = st.secrets["SUPABASE_KEY"]
+supabase_client: Client = create_client(supabase_url, supabase_key)
+
+def get_connection():
+    # Conexión a PostgreSQL (Para los datos de las tablas)
+    return psycopg2.connect(st.secrets["DATABASE_URL"])
 
 def init_db():
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_connection()
     c = conn.cursor()
     c.execute('''
         CREATE TABLE IF NOT EXISTS cotizaciones (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            id SERIAL PRIMARY KEY,
             fecha DATE,
             proveedor TEXT,
             contacto TEXT,
@@ -26,253 +33,226 @@ def init_db():
             destino TEXT,
             costo_alquiler REAL,
             costo_flete REAL,
+            archivo_pdf TEXT,
+            observaciones TEXT
+        )
+    ''')
+    c.execute('''
+        CREATE TABLE IF NOT EXISTS servicios (
+            id SERIAL PRIMARY KEY,
+            fecha DATE,
+            proveedor TEXT,
+            contacto TEXT,
+            tipo_servicio TEXT,
+            alcance TEXT,
+            ubicacion TEXT,
+            costo_total REAL,
+            archivo_pdf TEXT,
             observaciones TEXT
         )
     ''')
     conn.commit()
+    c.close()
     conn.close()
 
-def insertar_cotizacion(fecha, prov, contacto, equipo, esp, tarifa, origen, destino, alquiler, flete, obs):
-    conn = sqlite3.connect(DB_FILE)
+# --- FUNCIONES EQUIPOS ---
+def insertar_cotizacion(fecha, prov, contacto, equipo, esp, tarifa, origen, destino, alquiler, flete, pdf_nombre, obs):
+    conn = get_connection()
     c = conn.cursor()
     c.execute('''
-        INSERT INTO cotizaciones (fecha, proveedor, contacto, equipo, especificacion, tipo_tarifa, origen, destino, costo_alquiler, costo_flete, observaciones)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-    ''', (fecha, prov, contacto, equipo, esp, tarifa, origen, destino, alquiler, flete, obs))
+        INSERT INTO cotizaciones (fecha, proveedor, contacto, equipo, especificacion, tipo_tarifa, origen, destino, costo_alquiler, costo_flete, archivo_pdf, observaciones)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+    ''', (fecha, prov, contacto, equipo, esp, tarifa, origen, destino, alquiler, flete, pdf_nombre, obs))
     conn.commit()
+    c.close()
     conn.close()
+    st.cache_data.clear()
 
 def actualizar_cotizacion(id_cot, fecha, prov, contacto, equipo, esp, tarifa, origen, destino, alquiler, flete, obs):
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_connection()
     c = conn.cursor()
     c.execute('''
         UPDATE cotizaciones 
-        SET fecha=?, proveedor=?, contacto=?, equipo=?, especificacion=?, tipo_tarifa=?, origen=?, destino=?, costo_alquiler=?, costo_flete=?, observaciones=?
-        WHERE id=?
+        SET fecha=%s, proveedor=%s, contacto=%s, equipo=%s, especificacion=%s, tipo_tarifa=%s, origen=%s, destino=%s, costo_alquiler=%s, costo_flete=%s, observaciones=%s
+        WHERE id=%s
     ''', (fecha, prov, contacto, equipo, esp, tarifa, origen, destino, alquiler, flete, obs, id_cot))
     conn.commit()
+    c.close()
     conn.close()
+    st.cache_data.clear()
 
 def eliminar_cotizacion(id_cot):
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_connection()
     c = conn.cursor()
-    c.execute('DELETE FROM cotizaciones WHERE id=?', (id_cot,))
+    c.execute('DELETE FROM cotizaciones WHERE id=%s', (id_cot,))
     conn.commit()
+    c.close()
     conn.close()
+    st.cache_data.clear()
 
+@st.cache_data(ttl=300)
 def cargar_datos():
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_connection()
     df = pd.read_sql_query('SELECT * FROM cotizaciones', conn)
+    conn.close()
+    return df
+
+# --- FUNCIONES SERVICIOS ---
+def insertar_servicio(fecha, prov, contacto, tipo_serv, alcance, ubicacion, costo, pdf_nombre, obs):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('''
+        INSERT INTO servicios (fecha, proveedor, contacto, tipo_servicio, alcance, ubicacion, costo_total, archivo_pdf, observaciones)
+        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+    ''', (fecha, prov, contacto, tipo_serv, alcance, ubicacion, costo, pdf_nombre, obs))
+    conn.commit()
+    c.close()
+    conn.close()
+    st.cache_data.clear()
+
+def actualizar_servicio(id_serv, fecha, prov, contacto, tipo_serv, alcance, ubicacion, costo, obs):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('''
+        UPDATE servicios 
+        SET fecha=%s, proveedor=%s, contacto=%s, tipo_servicio=%s, alcance=%s, ubicacion=%s, costo_total=%s, observaciones=%s
+        WHERE id=%s
+    ''', (fecha, prov, contacto, tipo_serv, alcance, ubicacion, costo, obs, id_serv))
+    conn.commit()
+    c.close()
+    conn.close()
+    st.cache_data.clear()
+
+def eliminar_servicio(id_serv):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute('DELETE FROM servicios WHERE id=%s', (id_serv,))
+    conn.commit()
+    c.close()
+    conn.close()
+    st.cache_data.clear()
+
+@st.cache_data(ttl=300)
+def cargar_servicios():
+    conn = get_connection()
+    df = pd.read_sql_query('SELECT * FROM servicios', conn)
     conn.close()
     return df
 
 def formato_pesos(valor):
     return f"$ {valor:,.0f}".replace(",", ".")
 
-# Inicializar BD
 init_db()
+
+# --- ÍCONOS DINÁMICOS ---
+iconos_equipos = {
+    "Todos": "🌍", "Camión Grúa": "🚛", "Grúa Telescópica": "🏗️", 
+    "Montacarga": "🚜", "Manlift": "🦒", "Brazos Articulados": "🦾", 
+    "Tijeras": "✂️", "Andamios": "🪜", "Contenedor": "📦", 
+    "Baños Portátiles": "🚻", "Otro": "🛠️"
+}
 
 # ==========================================
 # 2. INTERFAZ DE USUARIO (UI)
 # ==========================================
-st.set_page_config(page_title="Directorio Polyuprotec", layout="wide")
+st.set_page_config(page_title="Directorio Polyuprotec", layout="wide", initial_sidebar_state="expanded")
 
-# --- LOGO EN LA BARRA LATERAL ---
-# Busca un archivo llamado 'logo.png' o 'logo.jpg' en tu carpeta
-if os.path.exists("logo.png"):
-    st.sidebar.image("logo.png", use_container_width=True)
-elif os.path.exists("logo.jpg"):
-    st.sidebar.image("logo.jpg", use_container_width=True)
-else:
-    st.sidebar.info("📌 Guarda el logo de Polyuprotec como 'logo.png' en esta misma carpeta para que aparezca aquí.")
+st.sidebar.markdown("---")
+st.sidebar.header("📌 Menú Principal")
+menu_principal = st.sidebar.radio("Selecciona el Módulo:", ["🚜 Equipos y Fletes", "🛠️ Módulo de Servicios"])
 
-st.title("🚜 Panel Interactivo de Cotizaciones y Fletes")
+# ==========================================
+# MÓDULO 1: EQUIPOS Y FLETES
+# ==========================================
+if menu_principal == "🚜 Equipos y Fletes":
+    st.title("🚜 Panel de Cotizaciones: Equipos y Fletes")
+    df = cargar_datos()
 
-df = cargar_datos()
+    opciones_equipos = ["Camión Grúa", "Grúa Telescópica", "Montacarga", "Manlift", "Brazos Articulados", "Tijeras", "Andamios", "Contenedor", "Baños Portátiles", "Otro"]
+    opciones_tarifas = ["Por Día", "Por Mes", "Global (Todo el proyecto)"]
 
-opciones_equipos = ["Camión Grúa", "Grúa Telescópica", "Montacarga", "Manlift", "Tijeras", "Andamios", "Otro"]
-opciones_tarifas = ["Por Día", "Por Mes", "Global (Todo el proyecto)"]
-
-# --- SECCIÓN A: REGISTRAR NUEVA COTIZACIÓN ---
-with st.expander("➕ Registrar Nueva Cotización", expanded=False):
-    with st.container(border=True):
-        st.markdown("### 🏢 Datos del Proveedor")
-        col1, col2, col3 = st.columns(3)
-        with col1: fecha_cot = st.date_input("Fecha de Cotización", date.today())
-        with col2: prov = st.text_input("Nombre del Proveedor *")
-        with col3: contacto = st.text_input("Teléfono/Email de Contacto")
-
-    with st.container(border=True):
-        st.markdown("### 🏗️ Detalles del Equipo")
-        col_eq1, col_eq2, col_eq3 = st.columns(3)
-        with col_eq1: 
-            equipo = st.selectbox("Tipo de Equipo", opciones_equipos)
-        
-        with col_eq2:
-            if equipo in ["Grúa Telescópica", "Camión Grúa", "Montacarga"]:
-                esp_val = st.number_input("Capacidad de Carga (Toneladas)", min_value=0.0, step=1.0)
-                esp_final = f"{esp_val} Toneladas"
-            elif equipo in ["Manlift", "Tijeras", "Andamios"]:
-                esp_val = st.number_input("Altura de Trabajo (Metros)", min_value=0.0, step=1.0)
-                esp_final = f"{esp_val} Metros"
-            else:
-                esp_final = st.text_input("Especificación Técnica")
-
-        with col_eq3:
-            tarifa = st.selectbox("Tipo de Tarifa", opciones_tarifas)
-
-    with st.container(border=True):
-        st.markdown("### 🚚 Logística y Costos")
-        col_log1, col_log2, col_log3, col_log4 = st.columns(4)
-        with col_log1: orig = st.text_input("Origen (Ciudad/Depto) *")
-        with col_log2: dest = st.text_input("Destino *")
-        with col_log3: alquiler = st.number_input("Costo de Alquiler", min_value=0, step=50000)
-        with col_log4: flete = st.number_input("Costo de Flete", min_value=0, step=50000)
+    with st.expander("➕ Registrar Nueva Cotización de Equipo", expanded=False):
+        with st.form("form_registro_equipo", clear_on_submit=True):
+            col1, col2, col3 = st.columns(3)
+            with col1: fecha_cot = st.date_input("Fecha", date.today())
+            with col2: prov = st.text_input("Proveedor *")
+            with col3: contacto = st.text_input("Contacto")
             
-    obs = st.text_area("Observaciones")
-    
-    if st.button("💾 Guardar Cotización", type="primary", use_container_width=True):
-        if prov and orig and dest:
-            insertar_cotizacion(fecha_cot, prov, contacto, equipo, esp_final, tarifa, orig, dest, alquiler, flete, obs)
-            st.success("✅ Cotización guardada correctamente.")
-            st.rerun()
-        else:
-            st.error("Por favor, completa los campos obligatorios (*).")
+            col_eq1, col_eq2, col_eq3 = st.columns(3)
+            with col_eq1: equipo = st.selectbox("Equipo", opciones_equipos)
+            with col_eq2:
+                esp_val = st.number_input("Capacidad / Altura (Ton o Mts)", min_value=0.0, step=1.0)
+                esp_final = f"{esp_val} Unidades"
+            with col_eq3: tarifa = st.selectbox("Tarifa", opciones_tarifas)
 
-
-# --- SECCIÓN B: GESTIONAR REGISTROS (EDITAR / ELIMINAR) ---
-if not df.empty:
-    with st.expander("✏️ Editar o 🗑️ Eliminar un Registro", expanded=False):
-        opciones_registro = df['id'].astype(str) + " - " + df['proveedor'] + " (" + df['equipo'] + " de " + df['especificacion'] + ")"
-        seleccion = st.selectbox("Selecciona la cotización a modificar:", opciones_registro)
-        
-        if seleccion:
-            id_seleccionado = int(seleccion.split(" - ")[0])
-            registro = df[df['id'] == id_seleccionado].iloc[0]
-            
-            try: fecha_actual = datetime.strptime(registro['fecha'], "%Y-%m-%d").date()
-            except: fecha_actual = date.today()
-
-            tab1, tab2 = st.tabs(["✏️ Editar Cotización", "🗑️ Eliminar Cotización"])
-            
-            with tab1:
-                st.info("Modifica los campos necesarios y presiona Actualizar.")
-                c1, c2, c3 = st.columns(3)
+            col_l1, col_l2, col_l3, col_l4 = st.columns(4)
+            with col_l1: orig = st.text_input("Origen *")
+            with col_l2: dest = st.text_input("Destino *")
+            with col_l3: alquiler = st.number_input("Alquiler", min_value=0, step=50000)
+            with col_l4: flete = st.number_input("Flete", min_value=0, step=50000)
                 
-                with c1:
-                    n_fecha = st.date_input("Fecha", fecha_actual, key="ed_f")
-                    n_prov = st.text_input("Proveedor", registro['proveedor'], key="ed_p")
-                    n_cont = st.text_input("Contacto", registro['contacto'] if pd.notna(registro['contacto']) else "", key="ed_c")
-                
-                with c2:
-                    idx_eq = opciones_equipos.index(registro['equipo']) if registro['equipo'] in opciones_equipos else 0
-                    n_eq = st.selectbox("Equipo", opciones_equipos, index=idx_eq, key="ed_eq")
-                    
-                    if n_eq in ["Grúa Telescópica", "Camión Grúa", "Montacarga"]:
-                        val_def = float(registro['especificacion'].split()[0]) if "Ton" in str(registro['especificacion']) else 0.0
-                        n_esp_val = st.number_input("Capacidad (Ton)", min_value=0.0, step=1.0, value=val_def, key="ed_esp_t")
-                        n_esp = f"{n_esp_val} Toneladas"
-                    elif n_eq in ["Manlift", "Tijeras", "Andamios"]:
-                        val_def = float(registro['especificacion'].split()[0]) if "Met" in str(registro['especificacion']) else 0.0
-                        n_esp_val = st.number_input("Altura (Mts)", min_value=0.0, step=1.0, value=val_def, key="ed_esp_m")
-                        n_esp = f"{n_esp_val} Metros"
-                    else:
-                        n_esp = st.text_input("Especificación", str(registro['especificacion']), key="ed_esp_o")
+            archivo_pdf = st.file_uploader("PDF", type=["pdf"])
+            obs = st.text_area("Observaciones")
+            
+            if st.form_submit_button("💾 Guardar Cotización", use_container_width=True):
+                if prov and orig and dest:
+                    nombre_pdf = ""
+                    if archivo_pdf:
+                        # Generar nombre único con la hora exacta
+                        nombre_pdf = f"{int(datetime.now().timestamp())}_{prov}_{equipo}.pdf".replace(" ", "_")
+                        # Subir archivo directamente a Supabase Storage
+                        supabase_client.storage.from_("documentos").upload(
+                            file=archivo_pdf.getvalue(),
+                            path=nombre_pdf,
+                            file_options={"content-type": "application/pdf"}
+                        )
+                    insertar_cotizacion(fecha_cot, prov, contacto, equipo, esp_final, tarifa, orig, dest, alquiler, flete, nombre_pdf, obs)
+                    st.success("¡Agregado exitosamente a la nube!")
+                    st.rerun()
+                else:
+                    st.error("Por favor completa los campos obligatorios (*).")
+
+    if not df.empty:
+        with st.expander("✏️ Editar o 🗑️ Eliminar un Registro de Equipo", expanded=False):
+            opciones_registro = df['id'].astype(str) + " - " + df['proveedor'] + " (" + df['equipo'] + ")"
+            seleccion = st.selectbox("Selecciona la cotización a modificar:", opciones_registro)
+            if seleccion:
+                id_sel = int(seleccion.split(" - ")[0])
+                reg = df[df['id'] == id_sel].iloc[0]
+                try: f_act = datetime.strptime(str(reg['fecha']), "%Y-%m-%d").date()
+                except: f_act = date.today()
+
+                tab1, tab2 = st.tabs(["✏️ Editar Cotización", "🗑️ Eliminar Cotización"])
+                with tab1:
+                    with st.form("form_edit_eq"):
+                        c1, c2, c3 = st.columns(3)
+                        with c1:
+                            nf = st.date_input("Fecha", f_act)
+                            np = st.text_input("Proveedor", reg['proveedor'])
+                            nc = st.text_input("Contacto", reg['contacto'] if pd.notna(reg['contacto']) else "")
+                        with c2:
+                            idx_eq = opciones_equipos.index(reg['equipo']) if reg['equipo'] in opciones_equipos else 0
+                            neq = st.selectbox("Equipo", opciones_equipos, index=idx_eq)
+                            nesp = st.text_input("Especificación", reg['especificacion'])
+                            nori = st.text_input("Origen", reg['origen'])
+                        with c3:
+                            idx_tar = opciones_tarifas.index(reg['tipo_tarifa']) if reg['tipo_tarifa'] in opciones_tarifas else 0
+                            ntar = st.selectbox("Tarifa", opciones_tarifas, index=idx_tar)
+                            ndes = st.text_input("Destino", reg['destino'])
+                            nalq = st.number_input("Alquiler", min_value=0, value=int(reg['costo_alquiler']), step=50000)
+                            nfle = st.number_input("Flete", min_value=0, value=int(reg['costo_flete']), step=50000)
+                        nobs = st.text_area("Observaciones", reg['observaciones'] if pd.notna(reg['observaciones']) else "")
                         
-                    n_ori = st.text_input("Origen", registro['origen'], key="ed_o")
-                
-                with c3:
-                    idx_tar = opciones_tarifas.index(registro['tipo_tarifa']) if registro['tipo_tarifa'] in opciones_tarifas else 0
-                    n_tar = st.selectbox("Tarifa", opciones_tarifas, index=idx_tar, key="ed_tar")
-                    n_des = st.text_input("Destino", registro['destino'], key="ed_d")
-                    n_alq = st.number_input("Alquiler", min_value=0, value=int(registro['costo_alquiler']), step=50000, key="ed_a")
-                    n_fle = st.number_input("Flete", min_value=0, value=int(registro['costo_flete']), step=50000, key="ed_fl")
-                
-                n_obs = st.text_area("Observaciones", registro['observaciones'] if pd.notna(registro['observaciones']) else "", key="ed_obs")
-                
-                if st.button("Actualizar Registro", type="primary", key="btn_actualizar"):
-                    actualizar_cotizacion(id_seleccionado, n_fecha, n_prov, n_cont, n_eq, n_esp, n_tar, n_ori, n_des, n_alq, n_fle, n_obs)
-                    st.success("¡Registro actualizado con éxito!")
-                    st.rerun()
+                        if st.form_submit_button("Actualizar Registro"):
+                            actualizar_cotizacion(id_sel, nf, np, nc, neq, nesp, ntar, nori, ndes, nalq, nfle, nobs)
+                            st.success("¡Registro actualizado con éxito!")
+                            st.rerun()
+                with tab2:
+                    st.warning(f"⚠️ Vas a eliminar el registro de **{reg['proveedor']}**.")
+                    if st.button("Sí, Eliminar Definitivamente", type="primary"):
+                        eliminar_cotizacion(id_sel)
+                        st.success("Registro eliminado.")
+                        st.rerun()
 
-            with tab2:
-                st.warning(f"⚠️ Estás a punto de eliminar la cotización #{id_seleccionado} de {registro['proveedor']}")
-                if st.button("Sí, Eliminar Definitivamente", type="primary", key="btn_eliminar"):
-                    eliminar_cotizacion(id_seleccionado)
-                    st.success("Registro eliminado.")
-                    st.rerun()
-
-# ==========================================
-# 3. PROCESAMIENTO Y DASHBOARD
-# ==========================================
-st.divider()
-
-if not df.empty:
-    df['costo_total'] = df['costo_alquiler'] + df['costo_flete']
-    
-    # --- KPIs Visuales Rápidos ---
-    c_kpi1, c_kpi2, c_kpi3 = st.columns(3)
-    c_kpi1.metric("Total Cotizaciones", len(df))
-    c_kpi2.metric("Equipos Únicos", df['equipo'].nunique())
-    c_kpi3.metric("Proveedores", df['proveedor'].nunique())
-    
-    # --- Sidebar Filtros ---
-    st.sidebar.header("Filtros de Búsqueda")
-    equipo_sel = st.sidebar.selectbox("Filtro por Equipo", ['Todos'] + list(df['equipo'].unique()))
-    tarifa_sel = st.sidebar.selectbox("Filtro por Tarifa", ['Todos'] + list(df['tipo_tarifa'].unique()))
-    origen_sel = st.sidebar.selectbox("Filtro por Origen", ['Todos'] + list(df['origen'].unique()))
-    
-    df_filtrado = df.copy()
-    if equipo_sel != 'Todos':
-        df_filtrado = df_filtrado[df_filtrado['equipo'] == equipo_sel]
-    if tarifa_sel != 'Todos':
-        df_filtrado = df_filtrado[df_filtrado['tipo_tarifa'] == tarifa_sel]
-    if origen_sel != 'Todos':
-        df_filtrado = df_filtrado[df_filtrado['origen'] == origen_sel]
-    
-    # --- Tabla Formateada ---
-    df_display = df_filtrado.copy()
-    for col in ['costo_alquiler', 'costo_flete', 'costo_total']:
-        df_display[col] = df_display[col].apply(formato_pesos)
-    
-    df_display = df_display[['id', 'fecha', 'proveedor', 'equipo', 'especificacion', 'tipo_tarifa', 'origen', 'destino', 'costo_alquiler', 'costo_flete', 'costo_total', 'contacto', 'observaciones']]
-    
-    # Botón de Descarga Excel / CSV
-    st.write("### Base de Datos General")
-    csv_data = df_display.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        label="📥 Descargar Tabla a Excel (CSV)",
-        data=csv_data,
-        file_name=f"Cotizaciones_Equipos_{date.today()}.csv",
-        mime='text/csv',
-        use_container_width=True
-    )
-    
-    st.dataframe(
-        df_display, 
-        use_container_width=True, 
-        hide_index=True,
-        column_config={
-            "observaciones": st.column_config.TextColumn("Observaciones", width="large"),
-            "proveedor": st.column_config.TextColumn("Proveedor", width="medium"),
-            "costo_total": st.column_config.TextColumn("Costo Total", width="medium")
-        }
-    )
-    
-    # --- Gráficos ---
-    st.subheader("Análisis de Costos Comparativos")
-    if not df_filtrado.empty:
-        fig = px.bar(
-            df_filtrado, 
-            x='proveedor', 
-            y=['costo_alquiler', 'costo_flete'],
-            title=f"Desglose de Costos (Alquiler + Flete)",
-            labels={'value': 'Costo (COP)', 'variable': 'Concepto', 'proveedor': 'Proveedor'},
-            color_discrete_sequence=['#1f77b4', '#2ca02c'], 
-            text_auto='.2s'
-        )
-        fig.update_layout(yaxis_tickformat=',.0f', barmode='stack')
-        st.plotly_chart(fig, use_container_width=True)
-
-else:
-    st.info("La base de datos está vacía. Registra tu primera cotización arriba.")
+    st.markdown("---")
+    if
