@@ -205,23 +205,21 @@ if menu_principal == "🚜 Equipos y Fletes":
                     nombre_pdf = ""
                     if archivo_pdf:
                         try:
-                            # Leer los bytes exactos del archivo subido por Streamlit
                             pdf_bytes = archivo_pdf.getvalue()
                             timestamp_unico = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                            # Limpiar espacios y caracteres especiales del nombre del archivo
                             prov_clean = "".join(c for c in prov if c.isalnum() or c in (' ', '_')).strip().replace(" ", "_")
                             equipo_clean = "".join(c for c in equipo if c.isalnum() or c in (' ', '_')).strip().replace(" ", "_")
                             nombre_pdf = f"{timestamp_unico}_{prov_clean}_{equipo_clean}.pdf"
                             
-                            # Subida segura al bucket 'documentos' de Supabase
                             supabase_client.storage.from_("documentos").upload(
                                 path=nombre_pdf,
                                 file=pdf_bytes,
                                 file_options={"content-type": "application/pdf", "upsert": "true"}
                             )
                         except Exception as e:
-                            st.error(f"⚠️ Error al subir el PDF a Supabase Storage: {e}")
-                            nombre_pdf = ""
+                            # AQUÍ MOSTRAMOS EL ERROR EXACTO EN ROJO
+                            st.error(f"❌ ERROR CRÍTICO DE SUPABASE STORAGE: {e}")
+                            st.stop() # Detiene la ejecución para que puedas leer el error
                             
                     insertar_cotizacion(fecha_cot, prov, contacto, equipo, esp_final, tarifa, orig, dest, alquiler, flete, nombre_pdf, obs)
                     st.success("¡Agregado exitosamente a la nube!")
