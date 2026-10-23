@@ -310,7 +310,7 @@ if menu_principal == "🚜 Equipos y Fletes":
                 use_container_width=True, hide_index=True
             )
             
-# --- VISOR INTEGRADO DIRECTO EN LA PÁGINA ---
+# --- VISOR SEGURO CON OBJETO HTML Y DESCARGA ---
             with st.expander("📂 Visualizar PDF en la Página"):
                 df_con_pdf = df_f[df_f['archivo_pdf'].notna() & (df_f['archivo_pdf'] != "") & (df_f['archivo_pdf'].astype(str) != "None")]
                 if not df_con_pdf.empty:
@@ -322,22 +322,30 @@ if menu_principal == "🚜 Equipos y Fletes":
                         
                         try:
                             import base64
-                            # Descargar los bytes reales del PDF desde el bucket de Supabase
+                            # Descargar los bytes reales del PDF desde Supabase
                             pdf_bytes = supabase_client.storage.from_("documentos").download(nombre_real_pdf)
-                            
-                            # Codificar en Base64 para incrustarlo nativamente en la página
                             b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
                             
                             st.markdown("---")
                             st.subheader("📄 Vista Previa del Documento")
                             
-                            # Incrustar el visor interactivo sin salir de Streamlit
-                            pdf_display = f'<iframe src="data:application/pdf;base64,{b64_pdf}" width="100%" height="600px" type="application/pdf"></iframe>'
+                            # Usar etiqueta <object> que tolera mejor los navegadores modernos
+                            pdf_display = f'<object data="data:application/pdf;base64,{b64_pdf}" type="application/pdf" width="100%" height="600px"><p>Tu navegador no soporta la previsualización integrada.</p></object>'
                             st.markdown(pdf_display, unsafe_allow_html=True)
                             
+                            st.markdown("<br>", unsafe_allow_html=True)
+                            
+                            # Botón nativo de descarga de Streamlit (nunca falla)
+                            st.download_button(
+                                label="📥 Descargar Archivo PDF",
+                                data=pdf_bytes,
+                                file_name=nombre_real_pdf,
+                                mime="application/pdf",
+                                use_container_width=True
+                            )
                             st.markdown("---")
                         except Exception as e:
-                            st.error(f"⚠️ No se pudo cargar la vista previa del PDF: {e}")
+                            st.error(f"⚠️ No se pudo cargar el documento: {e}")
                 else:
                     st.info("No hay PDFs adjuntos para este filtro.")
                     
