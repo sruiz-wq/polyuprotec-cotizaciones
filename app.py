@@ -223,6 +223,7 @@ if menu_principal == "🚜 Equipos y Fletes":
                                 path=nombre_pdf,
                                 file=pdf_bytes,
                                 file_options={"content-type": "application/pdf", "upsert": "true"}
+                                st.success("¡Agregado exitosamente a la nube!")
                             )
                         except Exception as e:
                             st.error(f"⚠️ Error al subir el PDF a Supabase Storage: {e}")
@@ -362,10 +363,17 @@ elif menu_principal == "🛠️ Módulo de Servicios":
                     nombre_pdf_s = ""
                     if pdf_serv:
                         try:
+                            import unicodedata
                             pdf_bytes_s = pdf_serv.getvalue()
                             timestamp_unico_s = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                            prov_s_clean = "".join(c for c in prov_serv if c.isalnum() or c in (' ', '_')).strip().replace(" ", "_")
-                            tipo_s_clean = "".join(c for c in tipo_s if c.isalnum() or c in (' ', '_')).strip().replace(" ", "_")
+                            
+                            def limpiar_texto(texto):
+                                nfkd = unicodedata.normalize('NFKD', texto)
+                                sin_tildes = "".join([c for c in nfkd if not unicodedata.combining(c)])
+                                return "".join(c for c in sin_tildes if c.isalnum() or c in (' ', '_')).strip().replace(" ", "_")
+
+                            prov_s_clean = limpiar_texto(prov_serv)
+                            tipo_s_clean = limpiar_texto(tipo_s)
                             nombre_pdf_s = f"{timestamp_unico_s}_{prov_s_clean}_{tipo_s_clean}.pdf"
                             
                             supabase_client.storage.from_("documentos").upload(
@@ -374,7 +382,7 @@ elif menu_principal == "🛠️ Módulo de Servicios":
                                 file_options={"content-type": "application/pdf", "upsert": "true"}
                             )
                         except Exception as e:
-                            st.error(f"⚠️ Error al subir el PDF de servicio a Supabase Storage: {e}")
+                            st.error(f"⚠️ Error al subir el PDF de servicio: {e}")
                             nombre_pdf_s = ""
                             
                     insertar_servicio(f_serv, prov_serv, cont_serv, tipo_s, alcance, ubica, costo_tot, nombre_pdf_s, obs_serv)
