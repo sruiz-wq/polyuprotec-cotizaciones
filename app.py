@@ -193,20 +193,24 @@ if menu_principal == "🚜 Equipos y Fletes":
                 
             archivo_pdf = st.file_uploader("PDF", type=["pdf"])
             obs = st.text_area("Observaciones")
-            
-            if st.form_submit_button("💾 Guardar Cotización", use_container_width=True):
+           if st.form_submit_button("💾 Guardar Cotización", use_container_width=True):
                 if prov and orig and dest:
                     nombre_pdf = ""
                     if archivo_pdf:
-                        nombre_pdf = f"{int(datetime.now().timestamp())}_{prov}_{equipo}.pdf".replace(" ", "_")
-                        # Subida segura basada en stream binario
-                        supabase_client.storage.from_("documentos").upload(
-                            path=nombre_pdf,
-                            file=archivo_pdf.read(),
-                            file_options={"content-type": "application/pdf"}
-                        )
+                        timestamp_unico = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                        nombre_pdf = f"{timestamp_unico}_{prov}_{equipo}.pdf".replace(" ", "_")
+                        try:
+                            supabase_client.storage.from_("documentos").upload(
+                                path=nombre_pdf,
+                                file=archivo_pdf.getvalue(),
+                                file_options={"content-type": "application/pdf"}
+                            )
+                        except Exception as e:
+                            st.error(f"⚠️ Error al subir el PDF a Supabase: {e}")
+                            nombre_pdf = "" # Evita que se guarde un nombre huérfano si falla la subida
+                            
                     insertar_cotizacion(fecha_cot, prov, contacto, equipo, esp_final, tarifa, orig, dest, alquiler, flete, nombre_pdf, obs)
-                    st.success("¡Agregado exitosamente a la nube!")
+                    st.success("¡Agregado exitosamente!")
                     st.rerun()
                 else:
                     st.error("Por favor completa los campos obligatorios (*).")
