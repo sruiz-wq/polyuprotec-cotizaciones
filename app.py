@@ -210,15 +210,15 @@ with st.expander("➕ Registrar Nueva Cotización de Equipo", expanded=False):
                             st.error(f"⚠️ Error al subir el PDF a Supabase: {e}")
                             nombre_pdf = ""
                             
-                    insertar_cotizacion(fecha_cot, prov, contacto, equipo, esp_final, tarifa, orig, dest, alquiler, flete, nombre_pdf, obs)
-                    st.success("¡Agregado exitosamente!")
-                    st.rerun()
-                else:
-                    st.error("Por favor completa los campos obligatorios (*).")
+insertar_cotizacion(fecha_cot, prov, contacto, equipo, esp_final, tarifa, orig, dest, alquiler, flete, nombre_pdf, obs)
+                st.success("¡Agregado exitosamente!")
+                st.rerun()
+            else:
+                st.error("Por favor completa los campos obligatorios (*).")
 
-    if not df.empty:
-        with st.expander("✏️ Editar o 🗑️ Eliminar un Registro de Equipo", expanded=False):
-            opciones_registro = df['id'].astype(str) + " - " + df['proveedor'] + " (" + df['equipo'] + ")"
+if not df.empty:
+    with st.expander("✏️ Editar o 🗑️ Eliminar un Registro de Equipo", expanded=False):
+        opciones_registro = df['id'].astype(str) + " - " + df['proveedor'] + " (" + df['equipo'] + ")"
             seleccion = st.selectbox("Selecciona la cotización a modificar:", opciones_registro)
             if seleccion:
                 id_sel = int(seleccion.split(" - ")[0])
