@@ -205,10 +205,18 @@ if menu_principal == "🚜 Equipos y Fletes":
                     nombre_pdf = ""
                     if archivo_pdf:
                         try:
+                            import unicodedata
                             pdf_bytes = archivo_pdf.getvalue()
                             timestamp_unico = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                            prov_clean = "".join(c for c in prov if c.isalnum() or c in (' ', '_')).strip().replace(" ", "_")
-                            equipo_clean = "".join(c for c in equipo if c.isalnum() or c in (' ', '_')).strip().replace(" ", "_")
+                            
+                            # Función para limpiar tildes y caracteres especiales
+                            def limpiar_texto(texto):
+                                nfkd = unicodedata.normalize('NFKD', texto)
+                                sin_tildes = "".join([c for c in nfkd if not unicodedata.combining(c)])
+                                return "".join(c for c in sin_tildes if c.isalnum() or c in (' ', '_')).strip().replace(" ", "_")
+
+                            prov_clean = limpiar_texto(prov)
+                            equipo_clean = limpiar_texto(equipo)
                             nombre_pdf = f"{timestamp_unico}_{prov_clean}_{equipo_clean}.pdf"
                             
                             supabase_client.storage.from_("documentos").upload(
@@ -217,9 +225,8 @@ if menu_principal == "🚜 Equipos y Fletes":
                                 file_options={"content-type": "application/pdf", "upsert": "true"}
                             )
                         except Exception as e:
-                            # AQUÍ MOSTRAMOS EL ERROR EXACTO EN ROJO
-                            st.error(f"❌ ERROR CRÍTICO DE SUPABASE STORAGE: {e}")
-                            st.stop() # Detiene la ejecución para que puedas leer el error
+                            st.error(f"⚠️ Error al subir el PDF a Supabase Storage: {e}")
+                            nombre_pdf = ""
                             
                     insertar_cotizacion(fecha_cot, prov, contacto, equipo, esp_final, tarifa, orig, dest, alquiler, flete, nombre_pdf, obs)
                     st.success("¡Agregado exitosamente a la nube!")
