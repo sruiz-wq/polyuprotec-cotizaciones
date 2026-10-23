@@ -199,11 +199,11 @@ if menu_principal == "🚜 Equipos y Fletes":
                     nombre_pdf = ""
                     if archivo_pdf:
                         nombre_pdf = f"{int(datetime.now().timestamp())}_{prov}_{equipo}.pdf".replace(" ", "_")
-                        # Subida corregida compatible con la librería de Supabase
+                        # Subida segura basada en stream binario
                         supabase_client.storage.from_("documentos").upload(
                             path=nombre_pdf,
-                            file=archivo_pdf.getvalue(),
-                            file_options={"content-type": "application/pdf", "upsert": "true"}
+                            file=archivo_pdf.read(),
+                            file_options={"content-type": "application/pdf"}
                         )
                     insertar_cotizacion(fecha_cot, prov, contacto, equipo, esp_final, tarifa, orig, dest, alquiler, flete, nombre_pdf, obs)
                     st.success("¡Agregado exitosamente a la nube!")
@@ -339,12 +339,11 @@ elif menu_principal == "🛠️ Módulo de Servicios":
                 if prov_serv and ubica:
                     nombre_pdf_s = ""
                     if pdf_serv:
-                        nombre_pdf = f"{int(datetime.now().timestamp())}_{prov}_{equipo}.pdf".replace(" ", "_")
-                        # Subida corregida compatible con la librería de Supabase
+                        nombre_pdf_s = f"{int(datetime.now().timestamp())}_{prov_serv}_{tipo_s}.pdf".replace(" ", "_")
                         supabase_client.storage.from_("documentos").upload(
                             path=nombre_pdf_s,
-                            file=archivo_pdf.getvalue(),
-                            file_options={"content-type": "application/pdf", "upsert": "true"}
+                            file=pdf_serv.read(),
+                            file_options={"content-type": "application/pdf"}
                         )
                     insertar_servicio(f_serv, prov_serv, cont_serv, tipo_s, alcance, ubica, costo_tot, nombre_pdf_s, obs_serv)
                     st.success("¡Servicio registrado con éxito en la nube!")
