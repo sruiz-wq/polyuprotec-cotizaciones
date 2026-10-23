@@ -310,7 +310,7 @@ if menu_principal == "🚜 Equipos y Fletes":
                 use_container_width=True, hide_index=True
             )
             
-# --- VISOR SEGURO CON OBJETO HTML Y DESCARGA ---
+# --- VISOR PROFESIONAL SEGURO ---
             with st.expander("📂 Visualizar PDF en la Página"):
                 df_con_pdf = df_f[df_f['archivo_pdf'].notna() & (df_f['archivo_pdf'] != "") & (df_f['archivo_pdf'].astype(str) != "None")]
                 if not df_con_pdf.empty:
@@ -321,31 +321,32 @@ if menu_principal == "🚜 Equipos y Fletes":
                         nombre_real_pdf = df_con_pdf[df_con_pdf['id'] == id_p]['archivo_pdf'].values[0]
                         
                         try:
-                            import base64
-                            # Descargar los bytes reales del PDF desde Supabase
+                            # Obtener URL pública directa desde Supabase Storage
+                            res_url = supabase_client.storage.from_("documentos").get_public_url(nombre_real_pdf)
+                            url_publica = res_url.get('publicUrl', res_url) if isinstance(res_url, dict) else res_url
+                            
+                            # Descargar bytes para el botón de descarga nativo
                             pdf_bytes = supabase_client.storage.from_("documentos").download(nombre_real_pdf)
-                            b64_pdf = base64.b64encode(pdf_bytes).decode('utf-8')
                             
                             st.markdown("---")
-                            st.subheader("📄 Vista Previa del Documento")
+                            st.subheader("📄 Gestión del Documento Adjunto")
+                            st.info(f"📁 Archivo vinculado: **{nombre_real_pdf}**")
                             
-                            # Usar etiqueta <object> que tolera mejor los navegadores modernos
-                            pdf_display = f'<object data="data:application/pdf;base64,{b64_pdf}" type="application/pdf" width="100%" height="600px"><p>Tu navegador no soporta la previsualización integrada.</p></object>'
-                            st.markdown(pdf_display, unsafe_allow_html=True)
-                            
-                            st.markdown("<br>", unsafe_allow_html=True)
-                            
-                            # Botón nativo de descarga de Streamlit (nunca falla)
-                            st.download_button(
-                                label="📥 Descargar Archivo PDF",
-                                data=pdf_bytes,
-                                file_name=nombre_real_pdf,
-                                mime="application/pdf",
-                                use_container_width=True
-                            )
+                            # Botones de acción limpia en Streamlit
+                            col_b1, col_b2 = st.columns(2)
+                            with col_b1:
+                                st.link_button("🔍 Ver documento en pantalla completa", url_publica, use_container_width=True)
+                            with col_b2:
+                                st.download_button(
+                                    label="📥 Descargar Archivo PDF",
+                                    data=pdf_bytes,
+                                    file_name=nombre_real_pdf,
+                                    mime="application/pdf",
+                                    use_container_width=True
+                                )
                             st.markdown("---")
                         except Exception as e:
-                            st.error(f"⚠️ No se pudo cargar el documento: {e}")
+                            st.error(f"⚠️ Error al procesar el archivo adjunto: {e}")
                 else:
                     st.info("No hay PDFs adjuntos para este filtro.")
                     
