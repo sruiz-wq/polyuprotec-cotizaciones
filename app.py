@@ -209,7 +209,6 @@ if menu_principal == "🚜 Equipos y Fletes":
                             pdf_bytes = archivo_pdf.getvalue()
                             timestamp_unico = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
                             
-                            # Función para limpiar tildes y caracteres especiales
                             def limpiar_texto(texto):
                                 nfkd = unicodedata.normalize('NFKD', texto)
                                 sin_tildes = "".join([c for c in nfkd if not unicodedata.combining(c)])
@@ -223,7 +222,6 @@ if menu_principal == "🚜 Equipos y Fletes":
                                 path=nombre_pdf,
                                 file=pdf_bytes,
                                 file_options={"content-type": "application/pdf", "upsert": "true"}
-                                st.success("¡Agregado exitosamente a la nube!")
                             )
                         except Exception as e:
                             st.error(f"⚠️ Error al subir el PDF a Supabase Storage: {e}")
