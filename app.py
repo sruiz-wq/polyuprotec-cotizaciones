@@ -191,9 +191,10 @@ if menu_principal == "🚜 Equipos y Fletes":
             with col_l3: alquiler = st.number_input("Alquiler", min_value=0, step=50000)
             with col_l4: flete = st.number_input("Flete", min_value=0, step=50000)
                 
-            archivo_pdf = st.file_uploader("PDF", type=["pdf"])
+          archivo_pdf = st.file_uploader("PDF", type=["pdf"])
             obs = st.text_area("Observaciones")
-           if st.form_submit_button("💾 Guardar Cotización", use_container_width=True):
+            
+            if st.form_submit_button("💾 Guardar Cotización", use_container_width=True):
                 if prov and orig and dest:
                     nombre_pdf = ""
                     if archivo_pdf:
@@ -207,7 +208,7 @@ if menu_principal == "🚜 Equipos y Fletes":
                             )
                         except Exception as e:
                             st.error(f"⚠️ Error al subir el PDF a Supabase: {e}")
-                            nombre_pdf = "" # Evita que se guarde un nombre huérfano si falla la subida
+                            nombre_pdf = ""
                             
                     insertar_cotizacion(fecha_cot, prov, contacto, equipo, esp_final, tarifa, orig, dest, alquiler, flete, nombre_pdf, obs)
                     st.success("¡Agregado exitosamente!")
