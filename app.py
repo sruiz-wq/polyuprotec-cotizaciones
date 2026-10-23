@@ -211,8 +211,8 @@ with st.expander("➕ Registrar Nueva Cotización de Equipo", expanded=False):
                             nombre_pdf = ""
                             
 insertar_cotizacion(fecha_cot, prov, contacto, equipo, esp_final, tarifa, orig, dest, alquiler, flete, nombre_pdf, obs)
-                st.success("¡Agregado exitosamente!")
-                st.rerun()
+                    st.success("¡Agregado exitosamente!")
+                    st.rerun()
             else:
                 st.error("Por favor completa los campos obligatorios (*).")
 
