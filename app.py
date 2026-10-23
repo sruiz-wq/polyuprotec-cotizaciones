@@ -325,15 +325,20 @@ if menu_principal == "🚜 Equipos y Fletes":
                         url_publica = res_url.get('publicUrl', res_url) if isinstance(res_url, dict) else res_url
                         
                         st.markdown("---")
-                        st.subheader("📄 Vista Previa del Documento")
+                        st.subheader("📄 Documento Adjunto en la Nube")
                         
-                        pdf_display = f'<embed src="{url_publica}" width="100%" height="600px" type="application/pdf">'
-                        st.markdown(pdf_display, unsafe_allow_html=True)
-                        
+                        # Usamos un contenedor estilizado con enlace directo y botón de descarga rápida
+                        col_v1, col_v2 = st.columns([2, 1])
+                        with col_v1:
+                            st.markdown(f"**Archivo:** `{nombre_real_pdf}`")
+                            st.markdown(f"🔗 [Hacer clic aquí para abrir el PDF directamente]({url_publica})")
+                        with col_v2:
+                            st.link_button("📥 Descargar PDF", url_publica, use_container_width=True)
+                            
                         st.markdown("---")
-                        st.link_button("📥 Descargar o abrir en pestaña completa", url_publica)
                 else:
                     st.info("No hay PDFs adjuntos para este filtro.")
+                    
 # ==========================================
 # MÓDULO 2: SERVICIOS
 # ==========================================
