@@ -204,18 +204,23 @@ if menu_principal == "🚜 Equipos y Fletes":
                 if prov and orig and dest:
                     nombre_pdf = ""
                     if archivo_pdf:
-                        # Generar nombre único con la hora exacta
-                        timestamp_unico = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                        nombre_pdf = f"{timestamp_unico}_{prov}_{equipo}.pdf".replace(" ", "_")
-                        # Subir archivo directamente a Supabase Storage con .read() y upsert
                         try:
+                            # Leer los bytes exactos del archivo subido por Streamlit
+                            pdf_bytes = archivo_pdf.getvalue()
+                            timestamp_unico = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                            # Limpiar espacios y caracteres especiales del nombre del archivo
+                            prov_clean = "".join(c for c in prov if c.isalnum() or c in (' ', '_')).strip().replace(" ", "_")
+                            equipo_clean = "".join(c for c in equipo if c.isalnum() or c in (' ', '_')).strip().replace(" ", "_")
+                            nombre_pdf = f"{timestamp_unico}_{prov_clean}_{equipo_clean}.pdf"
+                            
+                            # Subida segura al bucket 'documentos' de Supabase
                             supabase_client.storage.from_("documentos").upload(
                                 path=nombre_pdf,
-                                file=archivo_pdf.read(),
+                                file=pdf_bytes,
                                 file_options={"content-type": "application/pdf", "upsert": "true"}
                             )
                         except Exception as e:
-                            st.error(f"⚠️ Error al subir el PDF a Supabase: {e}")
+                            st.error(f"⚠️ Error al subir el PDF a Supabase Storage: {e}")
                             nombre_pdf = ""
                             
                     insertar_cotizacion(fecha_cot, prov, contacto, equipo, esp_final, tarifa, orig, dest, alquiler, flete, nombre_pdf, obs)
@@ -310,7 +315,6 @@ if menu_principal == "🚜 Equipos y Fletes":
                     if sel_pdf:
                         id_p = int(sel_pdf.split(" - ")[0])
                         nombre_real_pdf = df_con_pdf[df_con_pdf['id'] == id_p]['archivo_pdf'].values[0]
-                        # Obtener URL pública directa de la nube
                         url_publica = supabase_client.storage.from_("documentos").get_public_url(nombre_real_pdf)
                         
                         st.markdown("---")
@@ -352,16 +356,20 @@ elif menu_principal == "🛠️ Módulo de Servicios":
                 if prov_serv and ubica:
                     nombre_pdf_s = ""
                     if pdf_serv:
-                        timestamp_unico_s = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-                        nombre_pdf_s = f"{timestamp_unico_s}_{prov_serv}_{tipo_s}.pdf".replace(" ", "_")
                         try:
+                            pdf_bytes_s = pdf_serv.getvalue()
+                            timestamp_unico_s = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                            prov_s_clean = "".join(c for c in prov_serv if c.isalnum() or c in (' ', '_')).strip().replace(" ", "_")
+                            tipo_s_clean = "".join(c for c in tipo_s if c.isalnum() or c in (' ', '_')).strip().replace(" ", "_")
+                            nombre_pdf_s = f"{timestamp_unico_s}_{prov_s_clean}_{tipo_s_clean}.pdf"
+                            
                             supabase_client.storage.from_("documentos").upload(
                                 path=nombre_pdf_s,
-                                file=pdf_serv.read(),
+                                file=pdf_bytes_s,
                                 file_options={"content-type": "application/pdf", "upsert": "true"}
                             )
                         except Exception as e:
-                            st.error(f"⚠️ Error al subir el PDF de servicio: {e}")
+                            st.error(f"⚠️ Error al subir el PDF de servicio a Supabase Storage: {e}")
                             nombre_pdf_s = ""
                             
                     insertar_servicio(f_serv, prov_serv, cont_serv, tipo_s, alcance, ubica, costo_tot, nombre_pdf_s, obs_serv)
