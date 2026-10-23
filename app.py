@@ -310,32 +310,15 @@ if menu_principal == "🚜 Equipos y Fletes":
                 use_container_width=True, hide_index=True
             )
             
-            # --- VISOR DESDE SUPABASE ---
-            with st.expander("📂 Visualizar PDF en la Página"):
-                df_con_pdf = df_f[df_f['archivo_pdf'].notna() & (df_f['archivo_pdf'] != "") & (df_f['archivo_pdf'].astype(str) != "None")]
-                if not df_con_pdf.empty:
-                    opciones_pdf = df_con_pdf['id'].astype(str) + " - " + df_con_pdf['proveedor'] + " (" + df_con_pdf['equipo'] + ")"
-                    sel_pdf = st.selectbox("Selecciona la cotización para ver el documento:", opciones_pdf)
-                    if sel_pdf:
-                        id_p = int(sel_pdf.split(" - ")[0])
-                        nombre_real_pdf = df_con_pdf[df_con_pdf['id'] == id_p]['archivo_pdf'].values[0]
+# --- VISOR DIRECTO EN LA MISMA PÁGINA ---
+                        st.markdown("---")
+                        st.subheader("📄 Vista Previa del Documento")
                         
-                        # Obtener URL pública de Supabase
-                        res_url = supabase_client.storage.from_("documentos").get_public_url(nombre_real_pdf)
-                        url_publica = res_url.get('publicUrl', res_url) if isinstance(res_url, dict) else res_url
+                        pdf_display = f'<embed src="{url_publica}" width="100%" height="600px" type="application/pdf">'
+                        st.markdown(pdf_display, unsafe_allow_html=True)
                         
                         st.markdown("---")
-                        # Botón directo para abrir o descargar sin bloqueos de Chrome
-                        st.markdown(f"📄 **Documento disponible:** [Abrir PDF en una nueva pestaña]({url_publica})")
-                        st.link_button("📥 Descargar o ver PDF", url_publica)
-                        st.markdown("---")
-                else:
-                    st.info("No hay PDFs adjuntos para este filtro.")
-        else:
-            st.warning("⚠️ No se encontraron cotizaciones.")
-    else:
-        st.info("Base de datos vacía.")
-
+                        st.link_button("📥 Descargar o abrir en pestaña completa", url_publica)
 # ==========================================
 # MÓDULO 2: SERVICIOS
 # ==========================================
