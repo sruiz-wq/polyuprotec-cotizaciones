@@ -157,6 +157,12 @@ iconos_equipos = {
 # ==========================================
 st.set_page_config(page_title="Directorio Polyuprotec", layout="wide", initial_sidebar_state="expanded")
 
+# Mostrar logo en la barra lateral
+try:
+    st.sidebar.image("logo.png", use_container_width=True)
+except Exception:
+    pass
+
 st.sidebar.markdown("---")
 st.sidebar.header("📌 Menú Principal")
 menu_principal = st.sidebar.radio("Selecciona el Módulo:", ["🚜 Equipos y Fletes", "🛠️ Módulo de Servicios"])
@@ -198,14 +204,29 @@ if menu_principal == "🚜 Equipos y Fletes":
                 if prov and orig and dest:
                     nombre_pdf = ""
                     if archivo_pdf:
-                        # Generar nombre único con la hora exacta
-                        nombre_pdf = f"{int(datetime.now().timestamp())}_{prov}_{equipo}.pdf".replace(" ", "_")
-                        # Subir archivo directamente a Supabase Storage
-                        supabase_client.storage.from_("documentos").upload(
-                            file=archivo_pdf.getvalue(),
-                            path=nombre_pdf,
-                            file_options={"content-type": "application/pdf"}
-                        )
+                        try:
+                            import unicodedata
+                            pdf_bytes = archivo_pdf.getvalue()
+                            timestamp_unico = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                            
+                            def limpiar_texto(texto):
+                                nfkd = unicodedata.normalize('NFKD', texto)
+                                sin_tildes = "".join([c for c in nfkd if not unicodedata.combining(c)])
+                                return "".join(c for c in sin_tildes if c.isalnum() or c in (' ', '_')).strip().replace(" ", "_")
+
+                            prov_clean = limpiar_texto(prov)
+                            equipo_clean = limpiar_texto(equipo)
+                            nombre_pdf = f"{timestamp_unico}_{prov_clean}_{equipo_clean}.pdf"
+                            
+                            supabase_client.storage.from_("documentos").upload(
+                                path=nombre_pdf,
+                                file=pdf_bytes,
+                                file_options={"content-type": "application/pdf", "upsert": "true"}
+                            )
+                        except Exception as e:
+                            st.error(f"⚠️ Error al subir el PDF a Supabase Storage: {e}")
+                            nombre_pdf = ""
+                            
                     insertar_cotizacion(fecha_cot, prov, contacto, equipo, esp_final, tarifa, orig, dest, alquiler, flete, nombre_pdf, obs)
                     st.success("¡Agregado exitosamente a la nube!")
                     st.rerun()
@@ -298,13 +319,16 @@ if menu_principal == "🚜 Equipos y Fletes":
                     if sel_pdf:
                         id_p = int(sel_pdf.split(" - ")[0])
                         nombre_real_pdf = df_con_pdf[df_con_pdf['id'] == id_p]['archivo_pdf'].values[0]
-                        # Obtener URL pública directa de la nube
-                        url_publica = supabase_client.storage.from_("documentos").get_public_url(nombre_real_pdf)
+                        
+                        # Obtener URL pública de Supabase
+                        res_url = supabase_client.storage.from_("documentos").get_public_url(nombre_real_pdf)
+                        url_publica = res_url.get('publicUrl', res_url) if isinstance(res_url, dict) else res_url
                         
                         st.markdown("---")
-                        st.markdown(f'<iframe src="{url_publica}" width="100%" height="600px" type="application/pdf"></iframe>', unsafe_allow_html=True)
+                        # Botón directo para abrir o descargar sin bloqueos de Chrome
+                        st.markdown(f"📄 **Documento disponible:** [Abrir PDF en una nueva pestaña]({url_publica})")
+                        st.link_button("📥 Descargar o ver PDF", url_publica)
                         st.markdown("---")
-                        st.link_button("📥 Descargar o abrir en pestaña completa", url_publica)
                 else:
                     st.info("No hay PDFs adjuntos para este filtro.")
         else:
@@ -340,12 +364,29 @@ elif menu_principal == "🛠️ Módulo de Servicios":
                 if prov_serv and ubica:
                     nombre_pdf_s = ""
                     if pdf_serv:
-                        nombre_pdf_s = f"{int(datetime.now().timestamp())}_{prov_serv}_{tipo_s}.pdf".replace(" ", "_")
-                        supabase_client.storage.from_("documentos").upload(
-                            file=pdf_serv.getvalue(),
-                            path=nombre_pdf_s,
-                            file_options={"content-type": "application/pdf"}
-                        )
+                        try:
+                            import unicodedata
+                            pdf_bytes_s = pdf_serv.getvalue()
+                            timestamp_unico_s = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+                            
+                            def limpiar_texto(texto):
+                                nfkd = unicodedata.normalize('NFKD', texto)
+                                sin_tildes = "".join([c for c in nfkd if not unicodedata.combining(c)])
+                                return "".join(c for c in sin_tildes if c.isalnum() or c in (' ', '_')).strip().replace(" ", "_")
+
+                            prov_s_clean = limpiar_texto(prov_serv)
+                            tipo_s_clean = limpiar_texto(tipo_s)
+                            nombre_pdf_s = f"{timestamp_unico_s}_{prov_s_clean}_{tipo_s_clean}.pdf"
+                            
+                            supabase_client.storage.from_("documentos").upload(
+                                path=nombre_pdf_s,
+                                file=pdf_bytes_s,
+                                file_options={"content-type": "application/pdf", "upsert": "true"}
+                            )
+                        except Exception as e:
+                            st.error(f"⚠️ Error al subir el PDF de servicio: {e}")
+                            nombre_pdf_s = ""
+                            
                     insertar_servicio(f_serv, prov_serv, cont_serv, tipo_s, alcance, ubica, costo_tot, nombre_pdf_s, obs_serv)
                     st.success("¡Servicio registrado con éxito en la nube!")
                     st.rerun()
