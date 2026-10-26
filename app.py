@@ -310,7 +310,7 @@ if menu_principal == "🚜 Equipos y Fletes":
             c4.metric("⚙️ Especificación", mejor_opcion['especificacion'])
             c5.metric("💰 Alquiler Mínimo", formato_pesos(mejor_opcion['costo_alquiler']))
 
-st.markdown("### 📋 Base de Datos Detallada")
+            st.markdown("### 📋 Base de Datos Detallada")
             df_disp = df_f.copy()
             
             # Limpiar decimales de registros antiguos visualmente
