@@ -184,11 +184,23 @@ if menu_principal == "🚜 Equipos y Fletes":
             with col2: prov = st.text_input("Proveedor *")
             with col3: contacto = st.text_input("Contacto")
             
-            col_eq1, col_eq2, col_eq3 = st.columns(3)
+col_eq1, col_eq2, col_eq3 = st.columns(3)
             with col_eq1: equipo = st.selectbox("Equipo", opciones_equipos)
             with col_eq2:
-                esp_val = st.number_input("Capacidad / Altura (Ton o Mts)", min_value=0.0, step=1.0)
-                esp_final = f"{esp_val} Unidades"
+                # Al poner min_value=0 (entero), eliminamos los decimales
+                esp_val = st.number_input("Medida (Ton, Mts, Pies)", min_value=0, step=1)
+                
+                # Asignación dinámica de unidades según el equipo seleccionado
+                if equipo in ["Manlift", "Tijeras", "Brazos Articulados", "Telehandler", "Andamios"]:
+                    esp_final = f"{esp_val} Metros"
+                elif equipo in ["Camión Grúa", "Montacarga", "Grúa Telescópica"]:
+                    esp_final = f"{esp_val} Toneladas"
+                elif equipo == "Contenedor":
+                    esp_final = f"{esp_val} Pies"
+                elif equipo == "Baños Portátiles":
+                    esp_final = "1 Unidad" # Se sobreescribe sin importar el número ingresado
+                else:
+                    esp_final = f"{esp_val} Unidades"
             with col_eq3: tarifa = st.selectbox("Tarifa", opciones_tarifas)
 
             col_l1, col_l2, col_l3, col_l4 = st.columns(4)
@@ -300,8 +312,12 @@ if menu_principal == "🚜 Equipos y Fletes":
             c4.metric("⚙️ Especificación", mejor_opcion['especificacion'])
             c5.metric("💰 Alquiler Mínimo", formato_pesos(mejor_opcion['costo_alquiler']))
 
-            st.markdown("### 📋 Base de Datos Detallada")
+st.markdown("### 📋 Base de Datos Detallada")
             df_disp = df_f.copy()
+            
+            # Limpiar decimales de registros antiguos visualmente
+            df_disp['especificacion'] = df_disp['especificacion'].astype(str).str.replace(".0 ", " ", regex=False)
+            
             df_disp['archivo_pdf'] = df_disp['archivo_pdf'].apply(lambda x: "📄 Adjunto" if pd.notna(x) and str(x).strip() != "" and str(x).strip() != "None" else "Sin PDF")
             for col in ['costo_alquiler', 'costo_flete', 'costo_total']: df_disp[col] = df_disp[col].apply(formato_pesos)
             
