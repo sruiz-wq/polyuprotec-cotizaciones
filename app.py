@@ -149,7 +149,7 @@ iconos_equipos = {
     "Todos": "🌍", "Camión Grúa": "🚛", "Grúa Telescópica": "🏗️", 
     "Montacarga": "🚜", "Telehandler": "🚜", "Manlift": "🦒", "Brazos Articulados": "🦾", 
     "Tijeras": "✂️", "Andamios": "🪜", "Contenedor": "📦", 
-    "Baños Portátiles": "🚻", "Otro": "🛠️"
+    "Baños Portátiles": "🚻", "Planta Eléctrica": "⚡", "Otro": "🛠️"
 }
 
 # ==========================================
@@ -174,7 +174,7 @@ if menu_principal == "🚜 Equipos y Fletes":
     st.title("🚜 Panel de Cotizaciones: Equipos y Fletes")
     df = cargar_datos()
 
-    opciones_equipos = ["Camión Grúa", "Grúa Telescópica", "Montacarga", "Telehandler", "Manlift", "Brazos Articulados", "Tijeras", "Andamios", "Contenedor", "Baños Portátiles", "Otro"]
+    opciones_equipos = ["Camión Grúa", "Grúa Telescópica", "Montacarga", "Telehandler", "Manlift", "Brazos Articulados", "Tijeras", "Andamios", "Contenedor", "Baños Portátiles", "Planta Eléctrica", "Otro"]
     opciones_tarifas = ["Por Día", "Por Mes", "Global (Todo el proyecto)"]
 
     with st.expander("➕ Registrar Nueva Cotización de Equipo", expanded=False):
@@ -195,6 +195,8 @@ if menu_principal == "🚜 Equipos y Fletes":
                     esp_final = f"{esp_val} Toneladas"
                 elif equipo == "Contenedor":
                     esp_final = f"{esp_val} Pies"
+                elif equipo == "Planta Eléctrica":
+                    esp_final = f"{esp_val} kW"
                 elif equipo == "Baños Portátiles":
                     esp_final = "1 Unidad"
                 else:
