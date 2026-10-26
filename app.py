@@ -184,7 +184,7 @@ if menu_principal == "🚜 Equipos y Fletes":
             with col2: prov = st.text_input("Proveedor *")
             with col3: contacto = st.text_input("Contacto")
             
-col_eq1, col_eq2, col_eq3 = st.columns(3)
+            col_eq1, col_eq2, col_eq3 = st.columns(3)
             with col_eq1: equipo = st.selectbox("Equipo", opciones_equipos)
             with col_eq2:
                 esp_val = st.number_input("Medida (Ton, Mts, Pies)", min_value=0, step=1)
