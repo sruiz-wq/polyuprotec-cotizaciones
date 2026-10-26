@@ -147,7 +147,7 @@ init_db()
 # --- ÍCONOS DINÁMICOS ---
 iconos_equipos = {
     "Todos": "🌍", "Camión Grúa": "🚛", "Grúa Telescópica": "🏗️", 
-    "Montacarga": "🚜", "Manlift": "🦒", "Brazos Articulados": "🦾", 
+    "Montacarga": "🚜", "Telehandler": "🚜", "Manlift": "🦒", "Brazos Articulados": "🦾", 
     "Tijeras": "✂️", "Andamios": "🪜", "Contenedor": "📦", 
     "Baños Portátiles": "🚻", "Otro": "🛠️"
 }
@@ -174,7 +174,7 @@ if menu_principal == "🚜 Equipos y Fletes":
     st.title("🚜 Panel de Cotizaciones: Equipos y Fletes")
     df = cargar_datos()
 
-    opciones_equipos = ["Camión Grúa", "Grúa Telescópica", "Montacarga", "Manlift", "Brazos Articulados", "Tijeras", "Andamios", "Contenedor", "Baños Portátiles", "Otro"]
+    opciones_equipos = ["Camión Grúa", "Grúa Telescópica", "Montacarga", "Telehandler", "Manlift", "Brazos Articulados", "Tijeras", "Andamios", "Contenedor", "Baños Portátiles", "Otro"]
     opciones_tarifas = ["Por Día", "Por Mes", "Global (Todo el proyecto)"]
 
     with st.expander("➕ Registrar Nueva Cotización de Equipo", expanded=False):
