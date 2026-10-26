@@ -187,10 +187,8 @@ if menu_principal == "🚜 Equipos y Fletes":
 col_eq1, col_eq2, col_eq3 = st.columns(3)
             with col_eq1: equipo = st.selectbox("Equipo", opciones_equipos)
             with col_eq2:
-                # Al poner min_value=0 (entero), eliminamos los decimales
                 esp_val = st.number_input("Medida (Ton, Mts, Pies)", min_value=0, step=1)
                 
-                # Asignación dinámica de unidades según el equipo seleccionado
                 if equipo in ["Manlift", "Tijeras", "Brazos Articulados", "Telehandler", "Andamios"]:
                     esp_final = f"{esp_val} Metros"
                 elif equipo in ["Camión Grúa", "Montacarga", "Grúa Telescópica"]:
@@ -198,7 +196,7 @@ col_eq1, col_eq2, col_eq3 = st.columns(3)
                 elif equipo == "Contenedor":
                     esp_final = f"{esp_val} Pies"
                 elif equipo == "Baños Portátiles":
-                    esp_final = "1 Unidad" # Se sobreescribe sin importar el número ingresado
+                    esp_final = "1 Unidad"
                 else:
                     esp_final = f"{esp_val} Unidades"
             with col_eq3: tarifa = st.selectbox("Tarifa", opciones_tarifas)
