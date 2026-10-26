@@ -187,7 +187,7 @@ if menu_principal == "🚜 Equipos y Fletes":
             col_eq1, col_eq2, col_eq3 = st.columns(3)
             with col_eq1: equipo = st.selectbox("Equipo", opciones_equipos)
             with col_eq2:
-                esp_val = st.number_input("Medida (Ton, Mts, Pies)", min_value=0, step=1)
+                esp_val = st.number_input("Medida (Ton, Mts, Pies, kW)", min_value=0, step=1)
                 
                 if equipo in ["Manlift", "Tijeras", "Brazos Articulados", "Telehandler", "Andamios"]:
                     esp_final = f"{esp_val} Metros"
